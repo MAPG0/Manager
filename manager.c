@@ -35,9 +35,18 @@ int cambiar_lider(Grupo *g, Idol *nueva);
 void mostrar_grupo(const Grupo *g);
 int contar_activas(const Grupo *g);
 Idol *idol_mas_cansada(Grupo *g);
+int dar_concierto(Grupo *g);
+void mostrar_cancion_lider(const Grupo *g);
+void presentar_grupo(Grupo *g);
+void modificar_por_valor(Idol i);
+void modificar_por_referencia(Idol *i);
 
 
 int main(void) {
+
+    // HU-00: PREPARAR EL PROYECTO
+    printf("\nHU-00: PROYECTO MANAGER\n");
+    printf("Entorno preparado para administrar integrantes y canciones.\n");
 
     // HU-01: DEFINIR LAS INTEGRANTES
 
@@ -141,6 +150,14 @@ int main(void) {
     printf("Energia 1: %d\n", esta_activa(&Jennie));
 
 
+    // HU-08: PASO DE PARAMETROS POR VALOR Y POR APUNTADOR
+    printf("\nHU-08: PASO POR VALOR Y POR APUNTADOR\n");
+    Jennie.popularidad = 50;
+    modificar_por_valor(Jennie);
+    printf("Despues de modificar por valor, popularidad original: %d\n", Jennie.popularidad);
+    modificar_por_referencia(&Jennie);
+    printf("Despues de modificar por apuntador, popularidad original: %d\n", Jennie.popularidad);
+
     // HU-09: COLABORACION
 
     printf("\nHU-09: COLABORACION\n");
@@ -200,6 +217,15 @@ int main(void) {
         printf("Ambas integrantes se quedaron sin energia.\n");
     }
 
+
+    // HU-11: DIFERENCIA ENTRE ESTRUCTURA Y APUNTADOR
+    printf("\nHU-11: ESTRUCTURAS Y APUNTADORES\n");
+    Idol copia_idol = Jennie;
+    Idol *apuntador_idol = &Jennie;
+    printf("La estructura copia_idol ocupa su propio espacio: %p\n", (void *)&copia_idol);
+    printf("El apuntador guarda la direccion de Jennie: %p\n", (void *)apuntador_idol);
+    printf("Acceso a la copia: %s | acceso por apuntador: %s\n",
+           copia_idol.nombre, apuntador_idol->nombre);
 
     // HU-12: ESTRUCTURA CANCION
 
@@ -474,6 +500,46 @@ int main(void) {
            idol_mas_cansada(&vacio) == NULL ? "Si" : "No");
 
 
+    // HU-21: DAR CONCIERTO
+    printf("\nHU-21: DAR CONCIERTO\n");
+    g.miembros[0].energia = 100;
+    g.miembros[1].energia = 0;
+    g.miembros[2].energia = 60;
+    discos[0].vigencia = 2;
+    discos[1].vigencia = 1;
+    dar_concierto(&g);
+    mostrar_grupo(&g);
+    printf("Concierto con grupo NULL: %d\n", dar_concierto(NULL));
+
+    // HU-22: EQUIVALENCIA ENTRE ARREGLOS Y APUNTADORES
+    printf("\nHU-22: ARREGLOS Y APUNTADORES\n");
+    printf("Direccion del primer miembro con arreglo: %p\n", (void *)&g.miembros[0]);
+    printf("Direccion del primer miembro con apuntador: %p\n", (void *)(g.miembros + 0));
+    printf("Direccion del segundo miembro con arreglo: %p\n", (void *)&g.miembros[1]);
+    printf("Direccion del segundo miembro avanzando el apuntador: %p\n", (void *)(g.miembros + 1));
+    printf("Ambas formas recorren las mismas posiciones de memoria.\n");
+
+    // HU-23: MOSTRAR LA CANCION DE LA LIDER DE FORMA SEGURA
+    printf("\nHU-23: CANCION DE LA LIDER\n");
+    mostrar_cancion_lider(&g);
+    printf("Prueba con grupo NULL:\n");
+    mostrar_cancion_lider(NULL);
+    printf("Prueba con lider NULL:\n");
+    Grupo sin_lider = g;
+    sin_lider.lider = NULL;
+    mostrar_cancion_lider(&sin_lider);
+    printf("Prueba con lider sin cancion:\n");
+    Grupo sin_cancion = g;
+    sin_cancion.lider = &sin_cancion.miembros[0];
+    asignar_cancion(sin_cancion.lider, NULL);
+    mostrar_cancion_lider(&sin_cancion);
+
+    // HU-24: PRESENTACION DEL GRUPO
+    printf("\nHU-24: PRESENTACION DEL GRUPO\n");
+    presentar_grupo(&g);
+    printf("Presentacion con grupo NULL:\n");
+    presentar_grupo(NULL);
+
     return 0;
 }
 
@@ -701,3 +767,99 @@ Idol *idol_mas_cansada(Grupo *g) {
 
     return cansada;
 }
+
+// HU-08: DEMOSTRAR PASO POR VALOR
+void modificar_por_valor(Idol i) {
+    i.popularidad += 10;
+    printf("Dentro de modificar_por_valor: %d\n", i.popularidad);
+}
+
+// HU-08: DEMOSTRAR PASO POR APUNTADOR
+void modificar_por_referencia(Idol *i) {
+    if (i == NULL) {
+        return;
+    }
+
+    i->popularidad += 10;
+}
+
+// HU-21: DAR CONCIERTO
+int dar_concierto(Grupo *g) {
+    if (g == NULL || g->n <= 0 || g->n > 4) {
+        printf("No se puede realizar el concierto: grupo invalido.\n");
+        return 0;
+    }
+
+    int participantes = 0;
+
+    for (Idol *p = g->miembros; p < g->miembros + g->n; p++) {
+        if (esta_activa(p)) {
+            int ganancia = popularidad_total(p) * 10;
+            p->fans += ganancia;
+            p->energia = limitar(p->energia - 20, 0, p->energia_max);
+            participantes++;
+
+            printf("%s participa en el concierto y gana %d fans.\n",
+                   p->nombre, ganancia);
+
+            if (p->cancion != NULL && p->cancion->vigencia > 0) {
+                p->cancion->vigencia = limitar(p->cancion->vigencia - 1, 0, 2147483647);
+                if (p->cancion->vigencia == 0) {
+                    printf("La vigencia de %s termino.\n", p->cancion->nombre);
+                }
+            }
+        } else {
+            printf("%s no participa porque no tiene energia.\n", p->nombre);
+        }
+    }
+
+    printf("Concierto terminado. Integrantes participantes: %d\n", participantes);
+    return participantes;
+}
+
+// HU-23: MOSTRAR LA CANCION DE LA LIDER DE FORMA SEGURA
+void mostrar_cancion_lider(const Grupo *g) {
+    if (g == NULL) {
+        printf("No hay grupo disponible.\n");
+        return;
+    }
+
+    if (g->lider == NULL) {
+        printf("El grupo no tiene una lider asignada.\n");
+        return;
+    }
+
+    if (g->lider->cancion == NULL) {
+        printf("La lider %s no tiene una cancion asignada.\n", g->lider->nombre);
+        return;
+    }
+
+    printf("Cancion de la lider %s: %s\n",
+           g->lider->nombre, g->lider->cancion->nombre);
+}
+
+// HU-24: PRESENTACION DEL GRUPO
+void presentar_grupo(Grupo *g) {
+    if (g == NULL || g->n <= 0 || g->n > 4) {
+        printf("No se puede presentar: grupo invalido.\n");
+        return;
+    }
+
+    printf("\nPreparacion del grupo %s\n", g->nombre);
+    Idol *cansada = idol_mas_cansada(g);
+
+    if (cansada != NULL) {
+        printf("La integrante mas cansada es %s. Va a descansar.\n", cansada->nombre);
+        descansar(cansada);
+    }
+
+    printf("Se realiza el concierto de presentacion.\n");
+    dar_concierto(g);
+
+    printf("\nResumen de presentacion\n");
+    mostrar_grupo(g);
+    printf("Integrantes activas al finalizar: %d\n", contar_activas(g));
+    printf("Cancion de la lider: ");
+    mostrar_cancion_lider(g);
+}
+
